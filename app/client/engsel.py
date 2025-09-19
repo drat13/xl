@@ -298,7 +298,7 @@ def get_families(api_key: str, tokens: dict, package_category_code: str) -> dict
         "package_category_code": package_category_code,
         "with_icon_url": True,
         "is_migration": False,
-        "lang": "en"
+        "lang": "id"
     }
     
     res = send_api_request(api_key, path, payload_dict, tokens["id_token"], "POST")
@@ -322,16 +322,16 @@ def get_package(
     raw_payload = {
         "is_transaction_routine": False,
         "migration_type": "NONE",
-        "package_family_code": package_family_code,
+        "package_family_code": "",
         "family_role_hub": "",
         "is_autobuy": False,
         "is_enterprise": False,
         "is_shareable": False,
         "is_migration": False,
-        "lang": "en",
+        "lang": "id",
         "package_option_code": package_option_code,
         "is_upsell_pdp": False,
-        "package_variant_code": package_variant_code
+        "package_variant_code": ""
     }
     
     print("Fetching package...")
@@ -362,28 +362,6 @@ def get_addons(api_key: str, tokens: dict, package_option_code: str) -> dict:
         return None
         
     return res["data"]
-
-def intercept_page(
-    api_key: str,
-    tokens: dict,
-    option_code: str,
-    is_enterprise: bool = False
-):
-    path = "misc/api/v8/utility/intercept-page"
-    
-    raw_payload = {
-        "is_enterprise": is_enterprise,
-        "lang": "en",
-        "package_option_code": option_code
-    }
-    
-    print("Fetching intercept page...")
-    res = send_api_request(api_key, path, raw_payload, tokens["id_token"], "POST")
-    
-    if "status" in res:
-        print(f"Intercept status: {res['status']}")
-    else:
-        print("Intercept error")
 
 def send_payment_request(
     api_key: str,
@@ -473,9 +451,6 @@ def purchase_package(
     amount_str = input(f"Total amount is {price}.\nEnter value if you need to overwrite, press enter to ignore & use default amount: ")
     amount_int = price
     
-    # Intercept, IDK for what purpose
-    intercept_page(api_key, tokens, package_option_code, is_enterprise)
-    
     if amount_str != "":
         try:
             amount_int = int(amount_str)
@@ -488,7 +463,7 @@ def purchase_package(
         "payment_type": "PURCHASE",
         "is_enterprise": is_enterprise,
         "payment_target": payment_target,
-        "lang": "en",
+        "lang": "id",
         "is_referral": False,
         "token_confirmation": token_confirmation
     }
@@ -522,7 +497,11 @@ def purchase_package(
         "members": [],
         "total_fee": 0,
         "fingerprint": "",
-        "autobuy_threshold_setting": autobuy_threshold_setting,
+        "autobuy_threshold_setting": {
+            "label": "",
+            "type": "",
+            "value": 0
+        },
         "is_use_point": False,
         "lang": "en",
         "payment_method": "BALANCE",
@@ -553,7 +532,7 @@ def purchase_package(
             "is_spend_limit": False,
             "mission_id": "",
             "tax": 0,
-            # "benefit_type": "NONE",
+            "benefit_type": "",
             "quota_bonus": 0,
             "cashtag": "",
             "is_family_plan": False,
@@ -567,15 +546,13 @@ def purchase_package(
             },
         "total_amount": amount_int,
         "is_using_autobuy": False,
-        "items": [
-            {
-                "item_code": payment_target,
-                "product_type": "",
-                "item_price": price,
-                "item_name": item_name,
-                "tax": 0
-            }
-        ]
+        "items": [{
+            "item_code": payment_target,
+            "product_type": "",
+            "item_price": price,
+            "item_name": item_name,
+            "tax": 0
+        }]
     }
     
     print("Processing purchase...")
@@ -586,61 +563,4 @@ def purchase_package(
     
     input("Press Enter to continue...")
 
-def login_info(
-    api_key: str,
-    tokens: dict,
-    is_enterprise: bool = False
-):
-    path = "api/v8/auth/login"
     
-    raw_payload = {
-        "access_token": tokens["access_token"],
-        "is_enterprise": is_enterprise,
-        "lang": "en"
-    }
-    
-    res = send_api_request(api_key, path, raw_payload, tokens["id_token"], "POST")
-    
-    if "data" not in res:
-        print(json.dumps(res, indent=2))
-        print("Error getting package:", res.get("error", "Unknown error"))
-        return None
-        
-    return res["data"]
-
-def get_package_details(
-    api_key: str,
-    tokens: dict,
-    family_code: str,
-    variant_name: str,
-    option_order: int,
-    is_enterprise: bool,
-) -> dict | None:
-    family_data = get_family(api_key, tokens, family_code, is_enterprise)
-    if not family_data:
-        print(f"Gagal mengambil data family untuk {family_code}.")
-        return None
-    
-    package_variants = family_data["package_variants"]
-    option_code = None
-    for variant in package_variants:
-        if variant["name"] == variant_name:
-            selected_variant = variant
-            
-            package_options = selected_variant["package_options"]
-            for option in package_options:
-                if option["order"] == option_order:
-                    selected_option = option
-                    option_code = selected_option["package_option_code"]
-                    break
-
-    if option_code is None:
-        print("Gagal menemukan opsi paket yang sesuai.")
-        return None
-        
-    package_details_data = get_package(api_key, tokens, option_code)
-    if not package_details_data:
-        print("Gagal mengambil detail paket.")
-        return None
-    
-    return package_details_data
